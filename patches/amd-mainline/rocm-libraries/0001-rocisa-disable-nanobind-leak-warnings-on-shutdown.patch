@@ -1,0 +1,30 @@
+From 6efc2d3268f9964ea92c598d47246f2a0edd5b52 Mon Sep 17 00:00:00 2001
+From: "chang.liu" <chang.liu@amd.com>
+Date: Mon, 24 Aug 2026 18:51:49 +0800
+Subject: [PATCH 1/2] rocisa: disable nanobind leak warnings on shutdown
+
+TensileLogic imports rocisa; nanobind reports hundreds of __deepcopy__
+bindings as leaked at interpreter shutdown and exits with code 1 on Windows.
+
+Disable leak warnings so TensileLogic validation completes successfully.
+---
+ projects/hipblaslt/tensilelite/rocisa/rocisa/src/main.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/projects/hipblaslt/tensilelite/rocisa/rocisa/src/main.cpp b/projects/hipblaslt/tensilelite/rocisa/rocisa/src/main.cpp
+index c68ffccfb54..960c89f2358 100644
+--- a/projects/hipblaslt/tensilelite/rocisa/rocisa/src/main.cpp
++++ b/projects/hipblaslt/tensilelite/rocisa/rocisa/src/main.cpp
+@@ -41,6 +41,9 @@ void init_stinkytofu(nb::module_ m);
+ 
+ NB_MODULE(_rocisa, m)
+ {
++    // rocisa registers hundreds of __deepcopy__ bindings; nanobind reports them as
++    // leaked at interpreter shutdown and aborts the process (breaking TensileLogic).
++    nb::set_leak_warnings(false);
+     stinkytofu::BackendRegistry::registerAllBackends();
+     m.doc() = "Module rocisa.";
+     init_base(m);
+-- 
+2.55.0.windows.4
+
