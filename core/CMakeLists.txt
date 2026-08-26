@@ -279,6 +279,7 @@ if(THEROCK_ENABLE_HIP_RUNTIME)
       ${HIP_CLR_CMAKE_ARGS}
     BUILD_DEPS
       rocm-cmake
+      therock-msgpack-cxx
       therock-simde
     RUNTIME_DEPS
       amd-llvm

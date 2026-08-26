@@ -52,6 +52,22 @@ endif()
 
 # Otherwise, this is the sub-project build.
 cmake_minimum_required(VERSION 3.25)
+
+# Must be decided before project() / any target is created. Consumers such as
+# MIOpen with MIOPEN_USE_MSVC_STATIC_RUNTIME=ON link /MT and require matching
+# object code in this static library (otherwise lld-link reports dllimport CRT
+# symbols like strspn from a /MD-built sqlite3.c.obj).
+if(WIN32)
+  option(ROCM_SYSDEPS_USE_MSVC_STATIC_RUNTIME
+    "Link the MSVC runtime statically (/MT). Must match downstream ROCm libs."
+    OFF)
+  if(ROCM_SYSDEPS_USE_MSVC_STATIC_RUNTIME)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "" FORCE)
+  elseif(NOT CMAKE_MSVC_RUNTIME_LIBRARY)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "" FORCE)
+  endif()
+endif()
+
 project(SQLITE3_BUILD)
 include(CMakeDependentOption)
 
@@ -85,6 +101,19 @@ target_link_libraries(rocm_sysdeps_sqlite3 PRIVATE
   ${CMAKE_DL_LIBS}
   Threads::Threads
 )
+
+# Clang in TheRock does not always honor CMAKE_MSVC_RUNTIME_LIBRARY for C TU's;
+# force /MT object code so /MT consumers (e.g. MIOpen) do not see dllimport CRT
+# symbols from sqlite3.c.obj.
+if(WIN32 AND ROCM_SYSDEPS_USE_MSVC_STATIC_RUNTIME
+    AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_compile_options(rocm_sysdeps_sqlite3 PRIVATE
+    "$<$<COMPILE_LANGUAGE:C,CXX>:-D_MT>"
+  )
+  target_link_options(rocm_sysdeps_sqlite3 PRIVATE
+    "-Xclang" "--dependent-lib=libcmt"
+  )
+endif()
 
 install(TARGETS rocm_sysdeps_sqlite3)
 if(NOT WIN32)

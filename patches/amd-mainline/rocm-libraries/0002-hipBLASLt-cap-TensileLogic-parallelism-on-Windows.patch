@@ -5,12 +5,13 @@ Subject: [PATCH 2/2] hipBLASLt: cap TensileLogic parallelism on Windows
 
 ParallelMap2 ignored the -j argument and joblib loky opened too many worker
 processes, exhausting Windows handles (WinError 1450). Respect procs, default
-to four workers on Windows, and pass --jobs=4 from CMake for TensileLogic.
+to four workers on Windows, pass --jobs=4 from CMake, and pass --cxx-compiler
+so TensileLogic does not search PATH for a non-existent dist/bin/clang++.
 ---
- .../hipblaslt/device-library/CMakeLists.txt   |  7 +++++++
+ .../hipblaslt/device-library/CMakeLists.txt   |  8 ++++++++
  .../tensilelite/Tensile/Common/Parallel.py    | 19 +++++++++++++------
  .../Tensile/TensileLogic/ParseArguments.py    |  3 ++-
- 3 files changed, 22 insertions(+), 7 deletions(-)
+ 3 files changed, 23 insertions(+), 7 deletions(-)
 
 diff --git a/projects/hipblaslt/device-library/CMakeLists.txt b/projects/hipblaslt/device-library/CMakeLists.txt
 index eef2f31df5d..da6c7baff33 100644
@@ -25,21 +26,22 @@ index eef2f31df5d..da6c7baff33 100644
  endif()
  if(TENSILELITE_KEEP_BUILD_TMP)
      set(TENSILELITE_BUILD_OPTS ${TENSILELITE_BUILD_OPTS} "--keep-build-tmp")
-@@ -66,12 +68,17 @@ set(HIPBLASLT_TENSILELOGIC_KNOWN_BUGS
+@@ -66,12 +68,18 @@ set(HIPBLASLT_TENSILELOGIC_KNOWN_BUGS
  # of files; CONFIGURE_DEPENDS globs are costly). After editing logic only, run
  # scripts/run_tensile_logic_check.py or touch the stamp input to force re-validation.
  set(TENSILELOGIC_STAMP "${CMAKE_CURRENT_BINARY_DIR}/TensileLogic.stamp")
-+set(TENSILELOGIC_JOBS "")
++set(TENSILELOGIC_EXTRA_ARGS "")
 +if(WIN32)
-+    set(TENSILELOGIC_JOBS "--jobs=4")
++    list(APPEND TENSILELOGIC_EXTRA_ARGS "--jobs=4")
 +endif()
++list(APPEND TENSILELOGIC_EXTRA_ARGS "--cxx-compiler=${CMAKE_CXX_COMPILER}")
  add_custom_command(
      OUTPUT "${TENSILELOGIC_STAMP}"
      COMMENT "Validating library logic (TensileLogic --check-all) ..."
      COMMAND ${HIPBLASLT_PYTHON_COMMAND}
          "${hipblaslt_SOURCE_DIR}/tensilelite/Tensile/bin/TensileLogic"
          "${HIPBLASLT_LIBLOGIC_PATH}"
-+        ${TENSILELOGIC_JOBS}
++        ${TENSILELOGIC_EXTRA_ARGS}
          --known-bugs
          "${HIPBLASLT_TENSILELOGIC_KNOWN_BUGS}"
          --check-all

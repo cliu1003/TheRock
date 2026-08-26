@@ -50,6 +50,18 @@ endif()
 
 # Otherwise, this is the sub-project build.
 cmake_minimum_required(VERSION 3.25)
+
+if(WIN32)
+  option(ROCM_SYSDEPS_USE_MSVC_STATIC_RUNTIME
+    "Link the MSVC runtime statically (/MT). Must match downstream ROCm libs."
+    OFF)
+  if(ROCM_SYSDEPS_USE_MSVC_STATIC_RUNTIME)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "" FORCE)
+  elseif(NOT CMAKE_MSVC_RUNTIME_LIBRARY)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" CACHE STRING "" FORCE)
+  endif()
+endif()
+
 project(BZIP2_BUILD)
 
 # bzip2's build barely qualifies as such (it doesn't even install the shared
@@ -80,6 +92,16 @@ add_library(
 # Build as PIC no matter whether shared/static, since we want it consumable
 # in shared libs.
 set_target_properties(bz2_objects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+if(WIN32 AND ROCM_SYSDEPS_USE_MSVC_STATIC_RUNTIME
+    AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_compile_options(bz2_objects PRIVATE
+    "$<$<COMPILE_LANGUAGE:C,CXX>:-D_MT>"
+  )
+  target_link_options(bz2_objects PRIVATE
+    "-Xclang" "--dependent-lib=libcmt"
+  )
+endif()
 
 add_library(
   rocm_sysdeps_bz2
