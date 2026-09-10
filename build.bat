@@ -1,4 +1,4 @@
-@REM Align TheRock build with default.json ROCm stack (hipSdk + MIOpen).
+@REM Align TheRock build with the ROCm hipSdk stack (MIOpen disabled).
 
 @REM Excludes ORT/EP/ModelBench/MIGraphX/rocMLIR (not in TheRock).
 
@@ -6,7 +6,7 @@
 
 @REM After changing flags: re-run this script, then expunge/rebuild affected targets.
 
-@REM Example: ninja -C build MIOpen+expunge amd-comgr+expunge hip-clr+expunge && ninja -C build
+@REM Example: ninja -C build amd-comgr+expunge hip-clr+expunge && ninja -C build
 
 @REM run python build_tools/setup_ccache.py to create the .ccache directory and ccache.conf file
 
@@ -22,15 +22,15 @@ cmake -B build -GNinja . ^
 
 	-DBUILD_TESTING=OFF -DTHEROCK_BUILD_TESTING=OFF ^
 
-	-DTHEROCK_AMDGPU_FAMILIES=gfx115X-all;gfx110X-all ^
+	-DTHEROCK_AMDGPU_FAMILIES= ^
 
-	-DTHEROCK_AMDGPU_TARGETS= ^
+	-DTHEROCK_AMDGPU_TARGETS=gfx1151;gfx1152;gfx1150 ^
 
-	-DTHEROCK_TEST_AMDGPU_FAMILIES=gfx115X-all;gfx110X-all ^
+	-DTHEROCK_TEST_AMDGPU_FAMILIES= ^
 
-	-DTHEROCK_AMDGPU_DIST_BUNDLE_NAME=gfx11-all ^
+	-DTHEROCK_AMDGPU_DIST_BUNDLE_NAME=gfx1150-gfx1151-gfx1152 ^
 
-	-DTHEROCK_TEST_AMDGPU_TARGETS= ^
+	-DTHEROCK_TEST_AMDGPU_TARGETS=gfx1151;gfx1152;gfx1150 ^
 
 	-DTHEROCK_ENABLE_OCL_RUNTIME=OFF ^
 
@@ -53,6 +53,8 @@ cmake -B build -GNinja . ^
 	-DTHEROCK_ENABLE_CORE_HIPINFO=OFF ^
 
 	-DTHEROCK_ENABLE_CORE_HIPTESTS=OFF ^
+
+	-DTHEROCK_ENABLE_MIOPEN=OFF ^
 
 	-DTHEROCK_ENABLE_MIOPEN_PLUGIN=OFF ^
 
